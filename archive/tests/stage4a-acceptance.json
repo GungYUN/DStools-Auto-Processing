@@ -1,0 +1,18 @@
+{
+  "stage": "4A",
+  "decision_date": "2026-10-15",
+  "decision": "ACCEPTED_WITH_NOTED_DIFFERENCES",
+  "decided_by": "user",
+  "original_automated_status": "REVIEW",
+  "evidence": "stage4a-comparison.json",
+  "evidence_sha256": "801a30430855a52f0ae6835a265c979a876e10355dabc3eb1ca20e706c38d719",
+  "relative_rms_differences_percent": {
+    "ds_flux": 0.20894363566936583,
+    "stokes_i": 1.1035314473790625,
+    "stokes_v": 6.186596944195303e-05
+  },
+  "user_instruction": "我认为，1%的RMS差异没有必要进一步复核，我们可以直接进入下一步检验。除非你认为这存在极高的影响，不然请开始设计后续检查，然后给我指令",
+  "action": "Close the numerical review and proceed to Stage4B. Preserve original evidence; do not change scientific parameters, global tolerances or recompute.",
+  "original_evidence_sha256": "e5c2fe106ab66807d7e2d9e8d704e59d2274c3696416a51cbca734deaad2bcc7",
+  "publication_note": "The evidence file linked here is the public path-redacted copy; the original evidence and its original hash are retained privately. Acceptance and numerical results are unchanged."
+}

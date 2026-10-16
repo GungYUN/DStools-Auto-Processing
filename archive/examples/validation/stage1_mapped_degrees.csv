@@ -1,0 +1,5 @@
+Object,RightAscension,Declination,Label
+001,180,-28,synthetic
+Source A,180.125,-28.25,synthetic
+Target+03,0,-60,synthetic
+Target-04,359.9995833333333,15.5,synthetic

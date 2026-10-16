@@ -1,0 +1,22 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -398,5 +398,19 @@
+     schaapcommon
+     pybind11::embed)
+ 
++# The Python/Boost prefix ships a newer libstdc++ and OpenSSL pair.  The
++# system HDF5 discovery may inject an older, absolute-path libcrypto into
++# this list; do not combine it with the SSL library from the Python prefix.
++if(ASKAP_ABI_LIB_DIR)
++  if(NOT EXISTS "${ASKAP_ABI_LIB_DIR}/libssl.so.3" OR
++     NOT EXISTS "${ASKAP_ABI_LIB_DIR}/libcrypto.so.3")
++    message(FATAL_ERROR "Incomplete ASKAP OpenSSL runtime in ${ASKAP_ABI_LIB_DIR}")
++  endif()
++  list(FILTER EXTERNAL_LIBRARIES EXCLUDE REGEX "/lib(ssl|crypto)\\.so(\\.[0-9]+)*$")
++  list(APPEND EXTERNAL_LIBRARIES
++       "${ASKAP_ABI_LIB_DIR}/libssl.so.3"
++       "${ASKAP_ABI_LIB_DIR}/libcrypto.so.3")
++endif()
++
+ # Perform the BLAS check from aocommon
+ include("${CMAKE_CURRENT_LIST_DIR}/external/aocommon/CMake/CheckBLAS.cmake")

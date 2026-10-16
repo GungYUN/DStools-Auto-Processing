@@ -1,0 +1,171 @@
+{
+  "checks": [
+    {
+      "name": "all twelve Stage3 product fingerprints",
+      "status": "PASS",
+      "files_verified": [
+        "/fred/YOUR_PROJECT/YOUR_OZSTAR_USER/DStools_Auto_Processing_validation/stage3/single_SB74372_beam28/observations/SB74372_beam28--1a0d2f532f04/attempts/20261014T010827-67bf1e41bb80/products/SB74372_beam28.ds",
+        "/fred/YOUR_PROJECT/YOUR_OZSTAR_USER/DStools_Auto_Processing_validation/stage3/single_SB74372_beam28/observations/SB74372_beam28--1a0d2f532f04/attempts/20261014T010827-67bf1e41bb80/cutouts/wsclean-MFS-I-image.fits",
+        "/fred/YOUR_PROJECT/YOUR_OZSTAR_USER/DStools_Auto_Processing_validation/stage3/single_SB74372_beam28/observations/SB74372_beam28--1a0d2f532f04/attempts/20261014T010827-67bf1e41bb80/cutouts/wsclean-MFS-V-image.fits",
+        "/fred/YOUR_PROJECT/YOUR_OZSTAR_USER/DStools_Auto_Processing_validation/stage3/shared3_SB74372_beam28/products/.versions/d619ade0bbf1510553a684af00a497e13f16073ffaed6e94071e95aadc851732/1a0d2f532f040b634ebd43363ca54169062bf27d5e6d36e186e67f04a0eb3fe1/20261014T031211-c9562cab4afd/SB74372_beam28.ds",
+        "/fred/YOUR_PROJECT/YOUR_OZSTAR_USER/DStools_Auto_Processing_validation/stage3/shared3_SB74372_beam28/products/.versions/d619ade0bbf1510553a684af00a497e13f16073ffaed6e94071e95aadc851732/1a0d2f532f040b634ebd43363ca54169062bf27d5e6d36e186e67f04a0eb3fe1/20261014T031211-c9562cab4afd/wsclean_model/wsclean-MFS-I-image.fits",
+        "/fred/YOUR_PROJECT/YOUR_OZSTAR_USER/DStools_Auto_Processing_validation/stage3/shared3_SB74372_beam28/products/.versions/d619ade0bbf1510553a684af00a497e13f16073ffaed6e94071e95aadc851732/1a0d2f532f040b634ebd43363ca54169062bf27d5e6d36e186e67f04a0eb3fe1/20261014T031211-c9562cab4afd/wsclean_model/wsclean-MFS-V-image.fits",
+        "/fred/YOUR_PROJECT/YOUR_OZSTAR_USER/DStools_Auto_Processing_validation/stage3/shared3_SB74372_beam28/products/.versions/e7f72d05158c8ea3ce8cedea34b75f5b370b8b7be17294a051127045d10c2be2/1a0d2f532f040b634ebd43363ca54169062bf27d5e6d36e186e67f04a0eb3fe1/20261014T031211-fbb67f20ed02/SB74372_beam28.ds",
+        "/fred/YOUR_PROJECT/YOUR_OZSTAR_USER/DStools_Auto_Processing_validation/stage3/shared3_SB74372_beam28/products/.versions/e7f72d05158c8ea3ce8cedea34b75f5b370b8b7be17294a051127045d10c2be2/1a0d2f532f040b634ebd43363ca54169062bf27d5e6d36e186e67f04a0eb3fe1/20261014T031211-fbb67f20ed02/wsclean_model/wsclean-MFS-I-image.fits",
+        "/fred/YOUR_PROJECT/YOUR_OZSTAR_USER/DStools_Auto_Processing_validation/stage3/shared3_SB74372_beam28/products/.versions/e7f72d05158c8ea3ce8cedea34b75f5b370b8b7be17294a051127045d10c2be2/1a0d2f532f040b634ebd43363ca54169062bf27d5e6d36e186e67f04a0eb3fe1/20261014T031211-fbb67f20ed02/wsclean_model/wsclean-MFS-V-image.fits",
+        "/fred/YOUR_PROJECT/YOUR_OZSTAR_USER/DStools_Auto_Processing_validation/stage3/shared3_SB74372_beam28/products/.versions/330355f299469cb95709da3582904024db96646ae9b3da4b67bc927fae2ebbb9/1a0d2f532f040b634ebd43363ca54169062bf27d5e6d36e186e67f04a0eb3fe1/20261014T031211-e677f0ca8cdd/SB74372_beam28.ds",
+        "/fred/YOUR_PROJECT/YOUR_OZSTAR_USER/DStools_Auto_Processing_validation/stage3/shared3_SB74372_beam28/products/.versions/330355f299469cb95709da3582904024db96646ae9b3da4b67bc927fae2ebbb9/1a0d2f532f040b634ebd43363ca54169062bf27d5e6d36e186e67f04a0eb3fe1/20261014T031211-e677f0ca8cdd/wsclean_model/wsclean-MFS-I-image.fits",
+        "/fred/YOUR_PROJECT/YOUR_OZSTAR_USER/DStools_Auto_Processing_validation/stage3/shared3_SB74372_beam28/products/.versions/330355f299469cb95709da3582904024db96646ae9b3da4b67bc927fae2ebbb9/1a0d2f532f040b634ebd43363ca54169062bf27d5e6d36e186e67f04a0eb3fe1/20261014T031211-e677f0ca8cdd/wsclean_model/wsclean-MFS-V-image.fits"
+      ]
+    },
+    {
+      "name": "Anchor DS numeric comparison",
+      "status": "REVIEW",
+      "arrays": {
+        "flux": {
+          "shape": [
+            1,
+            69,
+            288,
+            4
+          ],
+          "single_dtype": "complex128",
+          "shared_dtype": "complex128",
+          "elements": 79488,
+          "finite_pairs": 78936,
+          "nonfinite_pattern_differences": 0,
+          "unequal_elements": 73585,
+          "exact_equal": false,
+          "max_abs_difference": 0.0004569760281740991,
+          "rms_difference": 8.214794453352892e-05,
+          "single_rms": 0.03931583954225843,
+          "relative_l2": 0.002089436356693658
+        },
+        "frequency": {
+          "shape": [
+            288
+          ],
+          "single_dtype": "float64",
+          "shared_dtype": "float64",
+          "elements": 288,
+          "finite_pairs": 288,
+          "nonfinite_pattern_differences": 0,
+          "unequal_elements": 0,
+          "exact_equal": true,
+          "max_abs_difference": 0.0,
+          "rms_difference": 0.0,
+          "single_rms": 891376313.1064292,
+          "relative_l2": 0.0
+        },
+        "time": {
+          "shape": [
+            69
+          ],
+          "single_dtype": "float64",
+          "shared_dtype": "float64",
+          "elements": 69,
+          "finite_pairs": 69,
+          "nonfinite_pattern_differences": 0,
+          "unequal_elements": 0,
+          "exact_equal": true,
+          "max_abs_difference": 0.0,
+          "rms_difference": 0.0,
+          "single_rms": 5256247702.266242,
+          "relative_l2": 0.0
+        },
+        "uvdist": {
+          "shape": [
+            1
+          ],
+          "single_dtype": "float64",
+          "shared_dtype": "float64",
+          "elements": 1,
+          "finite_pairs": 1,
+          "nonfinite_pattern_differences": 0,
+          "unequal_elements": 0,
+          "exact_equal": true,
+          "max_abs_difference": 0.0,
+          "rms_difference": 0.0,
+          "single_rms": 49.31148868854927,
+          "relative_l2": 0.0
+        }
+      },
+      "attribute_differences": {}
+    },
+    {
+      "name": "Anchor stokes_i cutout comparison",
+      "status": "REVIEW",
+      "array": {
+        "shape": [
+          240,
+          240
+        ],
+        "single_dtype": ">f4",
+        "shared_dtype": ">f4",
+        "elements": 57600,
+        "finite_pairs": 57600,
+        "nonfinite_pattern_differences": 0,
+        "unequal_elements": 57600,
+        "exact_equal": false,
+        "max_abs_difference": 2.0069332094863057e-05,
+        "rms_difference": 3.846084806893833e-06,
+        "single_rms": 0.0003485251658236346,
+        "relative_l2": 0.011035314473790626
+      },
+      "header_differences": {
+        "BMAJ": [
+          "0.00516850919607701",
+          "0.00516850969252583"
+        ],
+        "BMIN": [
+          "0.00425963215240329",
+          "0.00425963219638221"
+        ],
+        "BPA": [
+          "88.8693297574219",
+          "88.8693110393221"
+        ]
+      }
+    },
+    {
+      "name": "Anchor stokes_v cutout comparison",
+      "status": "REVIEW",
+      "array": {
+        "shape": [
+          240,
+          240
+        ],
+        "single_dtype": ">f4",
+        "shared_dtype": ">f4",
+        "elements": 57600,
+        "finite_pairs": 57600,
+        "nonfinite_pattern_differences": 0,
+        "unequal_elements": 54601,
+        "exact_equal": false,
+        "max_abs_difference": 4.0745362639427185e-10,
+        "rms_difference": 9.098026474689295e-11,
+        "single_rms": 0.0001470602749258734,
+        "relative_l2": 6.186596944195302e-07
+      },
+      "header_differences": {
+        "BMAJ": [
+          "0.00516850919607701",
+          "0.00516850969252583"
+        ],
+        "BMIN": [
+          "0.00425963215240329",
+          "0.00425963219638221"
+        ],
+        "BPA": [
+          "88.8693297574219",
+          "88.8693110393221"
+        ]
+      }
+    }
+  ],
+  "status": "REVIEW",
+  "publication": {
+    "personal_paths_redacted": true,
+    "note": "Public copy: personal paths replaced with placeholders. Numerical values and original check statuses are unchanged; unredacted evidence is retained privately."
+  }
+}

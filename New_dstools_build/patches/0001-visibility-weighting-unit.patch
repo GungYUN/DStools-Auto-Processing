@@ -1,0 +1,10 @@
+--- a/dstools/imaging.py
++++ b/dstools/imaging.py
+@@ -424,6 +424,7 @@
+             f"-weight briggs {self.robust}",
+             f"-auto-threshold {self.auto_threshold}",
+             f"-auto-mask {self.mask_threshold}",
++            "-visibility-weighting-mode unit",
+             self._channel_range,
+             self._datacolumn,
+             self._phasecentre_args,

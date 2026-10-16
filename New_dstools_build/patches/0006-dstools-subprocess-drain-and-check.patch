@@ -1,0 +1,136 @@
+diff --git a/dstools/logger.py b/dstools/logger.py
+--- a/dstools/logger.py
++++ b/dstools/logger.py
+@@ -1,6 +1,7 @@
+ import logging
+ import os
+ import selectors
++import subprocess
+ import threading
+ from contextlib import contextmanager
+ from functools import wraps
+@@ -59,8 +60,13 @@
+ 
+ 
+ def parse_stdout_stderr(process, logger, print_stdout: bool = False):
+-    """Parse STDOUT and STDERR from a subprocess and redirect to logger."""
++    """Drain a subprocess' output, wait for it, and propagate failures.
+ 
++    STDOUT and STDERR may reach EOF at different times. Keep reading until
++    both streams close; otherwise a quiet/closed STDERR can make the caller
++    return while a long-running WSClean child is still active.
++    """
++
+     sel = selectors.DefaultSelector()
+     sel.register(process.stdout, selectors.EVENT_READ)
+     sel.register(process.stderr, selectors.EVENT_READ)
+@@ -72,25 +78,30 @@
+         "PGPLOT /png: writing new file as",
+     ]
+ 
+-    lines_to_parse = True
+-    while lines_to_parse:
+-        for key, val in sel.select():
+-            line = key.fileobj.readline()
+-            if not line:
+-                lines_to_parse = False
+-                break
++    try:
++        while sel.get_map():
++            for key, _ in sel.select():
++                line = key.fileobj.readline()
++                if not line:
++                    sel.unregister(key.fileobj)
++                    continue
+ 
+-            line = line.decode().rstrip()
+-            debug_line = any(debug_str in line for debug_str in debug_lines)
++                line = line.decode(errors="replace").rstrip()
++                debug_line = any(debug_str in line for debug_str in debug_lines)
+ 
+-            if print_stdout:
+-                print(line)
+-            elif debug_line or key.fileobj is process.stdout:
+-                logger.debug(line)
+-            else:
+-                logger.warning(line.replace("### Warning:  ", ""))
++                if print_stdout:
++                    print(line)
++                elif debug_line or key.fileobj is process.stdout:
++                    logger.debug(line)
++                else:
++                    logger.warning(line.replace("### Warning:  ", ""))
++    finally:
++        sel.close()
+ 
+-    return
++    returncode = process.wait()
++    if returncode != 0:
++        raise subprocess.CalledProcessError(returncode, process.args)
++    return returncode
+ 
+ 
+ logger = logging.getLogger(__name__)
+diff --git a/tests/test_unit/test_logger.py b/tests/test_unit/test_logger.py
+--- a/tests/test_unit/test_logger.py
++++ b/tests/test_unit/test_logger.py
+@@ -122,6 +122,59 @@
+     assert "This is a message intended for stdout and not logs!" not in caplog.text
+ 
+ 
++def test_parse_stdout_stderr_drains_stdout_after_stderr_eof(caplog):
++    logger = logging.getLogger(__name__)
++    setupLogger(verbose=True)
++    logger.addHandler(caplog.handler)
++
++    script = (
++        "import os, time; "
++        "os.close(2); "
++        "print('stdout before stderr EOF', flush=True); "
++        "time.sleep(0.1); "
++        "print('stdout after stderr EOF', flush=True)"
++    )
++    p = subprocess.Popen(
++        [sys.executable, "-c", script],
++        stdout=subprocess.PIPE,
++        stderr=subprocess.PIPE,
++    )
++
++    returncode = parse_stdout_stderr(p, logger, print_stdout=False)
++
++    assert returncode == 0
++    assert "stdout before stderr EOF" in caplog.text
++    assert "stdout after stderr EOF" in caplog.text
++
++
++def test_parse_stdout_stderr_propagates_nonzero_exit(caplog):
++    logger = logging.getLogger(__name__)
++    setupLogger(verbose=True)
++    logger.addHandler(caplog.handler)
++
++    p = subprocess.Popen(
++        [
++            sys.executable,
++            "-c",
++            (
++                "import sys; "
++                "print('stdout before failure', flush=True); "
++                "print('stderr before failure', file=sys.stderr, flush=True); "
++                "raise SystemExit(7)"
++            ),
++        ],
++        stdout=subprocess.PIPE,
++        stderr=subprocess.PIPE,
++    )
++
++    with pytest.raises(subprocess.CalledProcessError) as error:
++        parse_stdout_stderr(p, logger, print_stdout=False)
++
++    assert error.value.returncode == 7
++    assert "stdout before failure" in caplog.text
++    assert "stderr before failure" in caplog.text
++
++
+ def run_filter_test(input_lines, substrings, expected_output):
+     """Test logic for simulating filter_pipe_output interaction with a pipe / file descriptor."""
+ 

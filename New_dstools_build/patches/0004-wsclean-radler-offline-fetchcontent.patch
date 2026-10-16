@@ -1,0 +1,14 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -233,5 +233,11 @@
+   BUILD_ALWAYS TRUE
+   BUILD_BYPRODUCTS ${RADLER_LIB}
+   CMAKE_ARGS
++    -DFETCHCONTENT_FULLY_DISCONNECTED:BOOL=ON
++    -DFETCHCONTENT_SOURCE_DIR_XTL:PATH=/opt/src/fetchcontent/xtl
++    -DFETCHCONTENT_SOURCE_DIR_XSIMD:PATH=/opt/src/fetchcontent/xsimd
++    -DFETCHCONTENT_SOURCE_DIR_XTENSOR:PATH=/opt/src/fetchcontent/xtensor
++    -DFETCHCONTENT_SOURCE_DIR_XTENSOR-BLAS:PATH=/opt/src/fetchcontent/xtensor-blas
++    -DFETCHCONTENT_SOURCE_DIR_XTENSOR-FFTW:PATH=/opt/src/fetchcontent/xtensor-fftw
+     -DCOMPILE_AS_EXTERNAL_PROJECT=On
+     -DPORTABLE=${PORTABLE}

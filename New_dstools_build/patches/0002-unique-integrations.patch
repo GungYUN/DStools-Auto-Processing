@@ -1,0 +1,11 @@
+--- a/dstools/ms.py
++++ b/dstools/ms.py
+@@ -365,7 +365,7 @@
+ 
+     @property
+     def integrations(self):
+-        return len(self.times)
++        return len(np.unique(self.times))
+ 
+     @property
+     def channels(self):

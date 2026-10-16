@@ -1,0 +1,458 @@
+{
+  "schema": 1,
+  "source_sha256": {
+    "/PATH/TO/Ozstar_ASKAP_UCDs/ozstar_askap/process_job.py": "50e9dab82291c7b659d19d79123faae135fa208421eddf5dadb54904555da5a2",
+    "/PATH/TO/Ozstar_ASKAP_UCDs/ozstar_askap/config.py": "5fe65759e1e59717e622ab85aa39f6963c53397c1a66804c5644c3a492a705ae",
+    "/PATH/TO/Ozstar_ASKAP_UCDs/ozstar_askap/shared_worker.py": "1e731595edf1b1d841202b5f95d1e85a3dfb0f691fb5d4b567e1ac0ac9f83e77",
+    "/PATH/TO/Ozstar_ASKAP_UCDs/ozstar_askap/crop_fits.py": "82d03d61a164aa5f233a2bd8490c159582dd789dd18aed5b28687afc7252550e",
+    "/PATH/TO/dstools-dev/dstools/cli/create_model.py": "868fa364573218422c4ee09287c36bc0185f2933b402cbd072c613eb8a041730",
+    "/PATH/TO/dstools-dev/dstools/cli/insert_model.py": "33db026fd0ab5f91cdf276fb8f6e8c05f5a92814861a268358fd5fd42d153731",
+    "/PATH/TO/dstools-dev/dstools/cli/subtract_model.py": "fe4b77b52cf0853b532ea8d5b3e30dc50c73f1e8e7dc0a13a080a076d73f4e59",
+    "/PATH/TO/dstools-dev/dstools/cli/extract_ds.py": "95b80216ec323ac07d2935982dce841d1048e486c4591fe617d34f5b7568cf26"
+  },
+  "accepted_sif_sha256": "95a579cfe4e43ac48e19831270b6d81ad678f0ed5e601fd37106706d46aa7316",
+  "note": "Captured from the production UCDs commands and accepted-build CLI source; no scientific callbacks are run.",
+  "commands": {
+    "dstools-create-model": {
+      "options": [
+        {
+          "flags": [
+            "-I",
+            "--imsize"
+          ],
+          "default": null,
+          "type": "int"
+        },
+        {
+          "flags": [
+            "-c",
+            "--cell"
+          ],
+          "default": null,
+          "type": "float"
+        },
+        {
+          "flags": [
+            "-B",
+            "--band"
+          ],
+          "default": "AT_L",
+          "choices": [
+            "AK_low",
+            "AK_mid",
+            "AK_high",
+            "AT_L",
+            "AT_C",
+            "AT_X",
+            "AT_K",
+            "MKT_UHF",
+            "MKT_L"
+          ]
+        },
+        {
+          "flags": [
+            "-C",
+            "--config"
+          ],
+          "choices": [
+            "6km",
+            "750_no6",
+            "750_6",
+            "H168"
+          ],
+          "default": "6km"
+        },
+        {
+          "flags": [
+            "-N",
+            "--iterations"
+          ],
+          "default": 30000
+        },
+        {
+          "flags": [
+            "-g",
+            "--mgain"
+          ],
+          "default": 0.8
+        },
+        {
+          "flags": [
+            "-t",
+            "--threshold"
+          ],
+          "default": 3
+        },
+        {
+          "flags": [
+            "-f",
+            "--channels-out"
+          ],
+          "default": 8
+        },
+        {
+          "flags": [
+            "-d",
+            "--datacolumn"
+          ],
+          "choices": [
+            "data",
+            "corrected"
+          ],
+          "default": "corrected"
+        },
+        {
+          "flags": [
+            "-d",
+            "--deconvolution-channels"
+          ],
+          "default": 8
+        },
+        {
+          "flags": [
+            "-s",
+            "--subimages"
+          ],
+          "default": 1
+        },
+        {
+          "flags": [
+            "-n",
+            "--spectral-pol-terms"
+          ],
+          "default": 3
+        },
+        {
+          "flags": [
+            "--minuvw-m"
+          ],
+          "default": null
+        },
+        {
+          "flags": [
+            "--minuvw-l"
+          ],
+          "default": null
+        },
+        {
+          "flags": [
+            "-S",
+            "--multiscale"
+          ],
+          "is_flag": true,
+          "default": false
+        },
+        {
+          "flags": [
+            "--multiscale-scale-bias"
+          ],
+          "type": "float",
+          "default": 0.7
+        },
+        {
+          "flags": [
+            "--multiscale-max-scales"
+          ],
+          "type": "int",
+          "default": 8
+        },
+        {
+          "flags": [
+            "-M",
+            "--fits-mask"
+          ],
+          "default": null,
+          "type": "Path"
+        },
+        {
+          "flags": [
+            "-T",
+            "--target-mask"
+          ],
+          "default": null,
+          "type": "Path"
+        },
+        {
+          "flags": [
+            "-G",
+            "--galvin-clip-mask"
+          ],
+          "default": null,
+          "type": "Path"
+        },
+        {
+          "flags": [
+            "--erode-beam-shape"
+          ],
+          "is_flag": true,
+          "default": false
+        },
+        {
+          "flags": [
+            "--local-rms-window"
+          ],
+          "type": "int",
+          "default": null
+        },
+        {
+          "flags": [
+            "-m",
+            "--mask-threshold"
+          ],
+          "default": 5
+        },
+        {
+          "flags": [
+            "-r",
+            "--robust"
+          ],
+          "default": 0.5
+        },
+        {
+          "flags": [
+            "-p",
+            "--phasecentre"
+          ],
+          "type": "str",
+          "nargs": 2,
+          "default": null
+        },
+        {
+          "flags": [
+            "--name"
+          ],
+          "type": "str",
+          "default": "wsclean"
+        },
+        {
+          "flags": [
+            "-o",
+            "--out-dir"
+          ],
+          "type": "Path",
+          "default": "wsclean_model"
+        },
+        {
+          "flags": [
+            "--temp-dir"
+          ],
+          "type": "Path"
+        },
+        {
+          "flags": [
+            "-L",
+            "--savelogs"
+          ],
+          "is_flag": true,
+          "default": false
+        },
+        {
+          "flags": [
+            "-j",
+            "--threads"
+          ],
+          "type": "int",
+          "default": null
+        },
+        {
+          "flags": [
+            "--abs-mem"
+          ],
+          "type": "int",
+          "default": null
+        },
+        {
+          "flags": [
+            "--parallel-gridding"
+          ],
+          "type": "int",
+          "default": null
+        },
+        {
+          "flags": [
+            "--parallel-reordering"
+          ],
+          "type": "int",
+          "default": null
+        },
+        {
+          "flags": [
+            "-v",
+            "--verbose/--no-verbose"
+          ],
+          "is_flag": true,
+          "default": false
+        }
+      ],
+      "arguments": [
+        "ms"
+      ],
+      "ucd_args": [
+        "-v",
+        "-B",
+        "AK_low",
+        "-N",
+        "100000",
+        "-j",
+        "8",
+        "--abs-mem",
+        "30",
+        "--minuvw-m",
+        "200.0",
+        "-S",
+        "--temp-dir",
+        "/work/tmp",
+        "/work/input.ms"
+      ]
+    },
+    "dstools-insert-model": {
+      "options": [
+        {
+          "flags": [
+            "-I",
+            "--interactive"
+          ],
+          "is_flag": true,
+          "default": false
+        },
+        {
+          "flags": [
+            "-p",
+            "--mask-pos"
+          ],
+          "type": "str",
+          "nargs": 2,
+          "default": null
+        },
+        {
+          "flags": [
+            "-r",
+            "--mask-radius"
+          ],
+          "default": null,
+          "type": "float"
+        }
+      ],
+      "arguments": [
+        "model_dir",
+        "ms"
+      ],
+      "ucd_args": [
+        "-p",
+        "84.519400000000",
+        "-2.231300000000",
+        "/work/model",
+        "/work/input.ms"
+      ]
+    },
+    "dstools-subtract-model": {
+      "options": [
+        {
+          "flags": [
+            "-S",
+            "--split-ms/--no-split-ms"
+          ],
+          "default": false
+        }
+      ],
+      "arguments": [
+        "ms"
+      ],
+      "ucd_args": [
+        "-S",
+        "/work/input.ms"
+      ]
+    },
+    "dstools-extract-ds": {
+      "options": [
+        {
+          "flags": [
+            "-d",
+            "--datacolumn"
+          ],
+          "choices": [
+            "data",
+            "corrected",
+            "model"
+          ],
+          "default": "data"
+        },
+        {
+          "flags": [
+            "-p",
+            "--phasecentre"
+          ],
+          "type": "str",
+          "nargs": 2,
+          "default": null
+        },
+        {
+          "flags": [
+            "-P",
+            "--primary-beam"
+          ],
+          "type": "Path",
+          "default": null
+        },
+        {
+          "flags": [
+            "-F",
+            "--noflag"
+          ],
+          "is_flag": true,
+          "default": false
+        },
+        {
+          "flags": [
+            "-B",
+            "--baseline-average/--no-baseline-average"
+          ],
+          "is_flag": true,
+          "default": true
+        },
+        {
+          "flags": [
+            "-u",
+            "--minuvdist"
+          ],
+          "type": "float",
+          "default": 0
+        },
+        {
+          "flags": [
+            "-v",
+            "--verbose"
+          ],
+          "is_flag": true,
+          "default": false
+        }
+      ],
+      "arguments": [
+        "ms",
+        "outfile"
+      ],
+      "ucd_args": [
+        "-u",
+        "500",
+        "-p",
+        "84.519400000000",
+        "-2.231300000000",
+        "/work/input.subtracted.ms",
+        "/work/output.ds"
+      ]
+    }
+  },
+  "resources": {
+    "parallel_slots": 4,
+    "threads_per_slot": 8,
+    "memory_gb": 160,
+    "tmp_gb": 10,
+    "hours_per_observation": 2.0,
+    "hours_per_target": 0.5,
+    "overhead_hours": 2.0,
+    "walltime_hours": 48.0,
+    "reserve_minutes": 20.0
+  },
+  "crop_arcmin": 10.0,
+  "publication_note": "Source paths are generic placeholders. Source hashes identify the original unredacted baseline files; scientific command declarations and resource values are unchanged."
+}

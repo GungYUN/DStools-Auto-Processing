@@ -1,0 +1,26 @@
+{
+  "coordinate_epoch": "J2000",
+  "pm_unit": "mas/yr",
+  "pmra_includes_cosdec": true,
+  "reference_catalogue": "legacy/ozstar_askap/UltracoolSheet_Version2.1_index_unbinaryUCD.csv",
+  "sources": [
+    {
+      "name": "Anchor A", "ra": 84.5194, "dec": -2.2313,
+      "pmra": -1.0, "pmdec": -5.0,
+      "reference_id": "UCS689", "reference_name": "S Ori J053804.65-021352.5",
+      "reference_pm": "Pena15"
+    },
+    {
+      "name": "Partner+02", "ra": 84.5421, "dec": -2.6072,
+      "pmra": 20.0, "pmdec": 34.0,
+      "reference_id": "UCS690", "reference_name": "S Ori 70",
+      "reference_pm": "Pena15"
+    },
+    {
+      "name": "Partner-03", "ra": 84.5596, "dec": -2.7532,
+      "pmra": 44.0, "pmdec": -4.0,
+      "reference_id": "UCS693", "reference_name": "S Ori 73",
+      "reference_pm": "Pena15"
+    }
+  ]
+}

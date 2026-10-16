@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ozstar-askap-auto"
+version = "1.0.0"
+description = "ASKAP catalogue and single-source DStools automation for Ozstar"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "astropy>=6", "astroquery>=0.4.11", "keyring>=23"]
+
+[project.scripts]
+askap-batch = "askap_auto.cli:batch_main"
+askap-source = "askap_auto.cli:source_main"
+
+[tool.setuptools.packages.find]
+include = ["askap_auto*"]
+
+[tool.setuptools.package-data]
+askap_auto = ["wsclean_slot/wsclean"]

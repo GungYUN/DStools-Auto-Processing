@@ -1,0 +1,4 @@
+numpy>=1.24
+astropy>=6
+astroquery>=0.4.11
+keyring>=23

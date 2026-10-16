@@ -1,0 +1,514 @@
+Bootstrap: localimage
+From: ../base/bootstrap.sif
+
+%files
+    versions.env                                             /opt/build-recipe/versions.env
+    python-runtime-requirements.lock.txt                     /opt/build-recipe/python-runtime-requirements.lock.txt
+    dstools-main-requirements.lock.txt                       /opt/build-recipe/dstools-main-requirements.lock.txt
+    controller-direct-pins.txt                               /opt/build-recipe/controller-direct-pins.txt
+    ../patches/0003-wsclean-header-only-boost-system.patch  /opt/build-recipe/0003-wsclean-header-only-boost-system.patch
+    ../patches/0004-wsclean-radler-offline-fetchcontent.patch /opt/build-recipe/0004-wsclean-radler-offline-fetchcontent.patch
+    ../patches/0005-wsclean-consistent-abi-libraries.patch /opt/build-recipe/0005-wsclean-consistent-abi-libraries.patch
+    ../offline/apt                                           /opt/offline/apt
+    ../offline/wheels                                        /opt/offline/wheels
+    ../offline/python/askap-python.tar.gz                    /opt/offline/askap-python.tar.gz
+    ../offline/casa/casa-data.tar                            /opt/offline/casa-data.tar
+    ../offline/astropy/sites.json                            /opt/offline/astropy-sites.json
+    ../offline/casacore/casacore-measures.ztar               /opt/offline/casacore-measures.ztar
+    ../offline/sources/casacore.tar                          /opt/offline/sources/casacore.tar
+    ../offline/sources/wsclean.tar                           /opt/offline/sources/wsclean.tar
+    ../offline/sources/python-casacore.tar                   /opt/offline/sources/python-casacore.tar
+    ../offline/sources/dstools-build.tar                     /opt/offline/sources/dstools-build.tar
+    ../offline/sources/fetchcontent-xtl.tar                   /opt/offline/sources/fetchcontent-xtl.tar
+    ../offline/sources/fetchcontent-xsimd.tar                 /opt/offline/sources/fetchcontent-xsimd.tar
+    ../offline/sources/fetchcontent-xtensor.tar               /opt/offline/sources/fetchcontent-xtensor.tar
+    ../offline/sources/fetchcontent-xtensor-blas.tar          /opt/offline/sources/fetchcontent-xtensor-blas.tar
+    ../offline/sources/fetchcontent-xtensor-fftw.tar          /opt/offline/sources/fetchcontent-xtensor-fftw.tar
+    ../manifests                                             /opt/build-input-manifests
+
+%post -c /bin/bash
+    set -Eeuo pipefail
+    trap 'rc=$?; echo "ERROR: SIF %post line ${LINENO}: ${BASH_COMMAND} (exit=${rc})" >&2' ERR
+    # WSClean refuses to start with multithreaded OpenBLAS.  This affects
+    # the build-time smoke test and every later invocation inside the SIF.
+    export OPENBLAS_NUM_THREADS=1
+    export DEBIAN_FRONTEND=noninteractive
+    source /opt/build-recipe/versions.env
+
+    mkdir -p /opt/askap-build-info
+    cp -a /opt/build-input-manifests/. /opt/askap-build-info/
+
+    check_casacore_linkage() {
+        local target=$1
+        local label=$2
+        local output_file="/opt/askap-build-info/${label}-ldd.txt"
+        ldd "$target" | tee "$output_file"
+        if grep -q 'not found' "$output_file"; then
+            echo "ERROR: $label has unresolved shared libraries." >&2
+            exit 1
+        fi
+        if ! grep -q 'libcasa_' "$output_file"; then
+            echo "ERROR: $label has no visible casacore linkage." >&2
+            exit 1
+        fi
+        if grep 'libcasa_' "$output_file" | grep -v '/opt/casacore/' >/dev/null; then
+            echo "ERROR: $label resolves at least one casacore library outside /opt/casacore." >&2
+            grep 'libcasa_' "$output_file" >&2
+            exit 1
+        fi
+    }
+
+    echo "=== [A] Install build dependencies from the local APT repository ==="
+    chmod -R a+rX /opt/offline/apt
+    find /etc/apt/sources.list.d -type f -delete
+    printf '%s\n' 'deb [trusted=yes] file:/opt/offline/apt ./' > /etc/apt/sources.list
+    apt-get -o Acquire::Languages=none update
+    # Let APT acquire packages from the file: repository above. --no-download
+    # only permits .debs already in APT's cache, not merely present in a
+    # separate local repository, and can leave dpkg with relative filenames.
+    apt-get -y --no-install-recommends install "${APT_BUILD_PACKAGES[@]}"
+
+    echo "=== [A.1] Restore offline source trees with symlinks intact ==="
+    mkdir -p /opt/src
+    for source_name in casacore wsclean python-casacore dstools-build; do
+        tar -xf "/opt/offline/sources/${source_name}.tar" -C /opt/src
+        test -d "/opt/src/${source_name}"
+    done
+    test -L /opt/src/casacore/casacore
+    test "$(readlink /opt/src/casacore/casacore)" = .
+    mv /opt/src/dstools-build /opt/src/dstools
+    mkdir -p /opt/src/fetchcontent
+    for dependency_name in xtl xsimd xtensor xtensor-blas xtensor-fftw; do
+        tar -xf "/opt/offline/sources/fetchcontent-${dependency_name}.tar" \
+            -C /opt/src/fetchcontent
+        test -d "/opt/src/fetchcontent/${dependency_name}/include"
+    done
+
+    echo "=== [B] Unpack the relocatable Python 3.12 / Boost.Python environment ==="
+    mkdir -p /opt/askap
+    tar -xzf /opt/offline/askap-python.tar.gz -C /opt/askap
+    # conda-unpack uses /usr/bin/env python; the bootstrap image has no
+    # system-level python command, so expose the unpacked environment first.
+    export PATH="/opt/askap/bin:$PATH"
+    test "$(command -v python)" = /opt/askap/bin/python
+    /opt/askap/bin/conda-unpack
+    /opt/askap/bin/python --version
+    test "$(/opt/askap/bin/python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" \
+        = "$PYTHON_VERSION"
+    test "$(/opt/askap/bin/python -c 'import numpy; print(numpy.__version__)')" = "$NUMPY_VERSION"
+    find /opt/askap/lib -maxdepth 1 \( -type f -o -type l \) \
+        -name 'libboost_python3*.so*' -print -quit | grep -q .
+    BOOST_PYTHON_LIB="$(find /opt/askap/lib -maxdepth 1 \( -type f -o -type l \) \
+        -name 'libboost_python3*.so' -print -quit)"
+    test -n "$BOOST_PYTHON_LIB"
+    BOOST_PYTHON_SUFFIX="${PYTHON_VERSION//./}"
+    test -d /opt/askap/include/boost
+    test -d "/opt/askap/include/python${PYTHON_VERSION}"
+
+    echo "=== [C] Install the completely locked Python wheel set without an index ==="
+    export PIP_NO_INDEX=1
+    export PIP_FIND_LINKS=/opt/offline/wheels
+    export PIP_DISABLE_PIP_VERSION_CHECK=1
+    /opt/askap/bin/python -m pip install \
+        --no-index --no-deps --find-links /opt/offline/wheels \
+        -r /opt/build-recipe/python-runtime-requirements.lock.txt
+    test "$(/opt/askap/bin/python -c 'import numpy; print(numpy.__version__)')" = "$NUMPY_VERSION"
+    if find /opt/offline/wheels -maxdepth 1 -type f -iname 'python_casacore*' | grep -q .; then
+        echo "ERROR: python-casacore wheel found; it must be compiled against /opt/casacore." >&2
+        exit 1
+    fi
+
+    echo "=== [C.1] Bundle the frozen Astropy observatory registry ==="
+    # EarthLocation.of_site() looks for this package-local path before trying
+    # the network/cache. Keep it readable in the final read-only SIF so every
+    # DStools entry point can import dstools.utils on an offline node.
+    ASTROPY_SITES_DEST="$(/opt/askap/bin/python -c '
+from astropy.utils.data import get_pkg_data_path
+print(get_pkg_data_path("coordinates/sites.json", package="astropy.coordinates"))
+')"
+    mkdir -p "$(dirname "$ASTROPY_SITES_DEST")"
+    cp /opt/offline/astropy-sites.json "$ASTROPY_SITES_DEST"
+    cmp /opt/offline/astropy-sites.json "$ASTROPY_SITES_DEST"
+    # %post runs as fakeroot, whereas users execute the finished SIF with
+    # their normal uid. The build's restrictive umask must not hide this
+    # public, package-local registry from regular users.
+    chmod a+rx "$(dirname "$ASTROPY_SITES_DEST")"
+    chmod a+r "$ASTROPY_SITES_DEST"
+    /opt/askap/bin/python -c '
+from astropy.coordinates import EarthLocation
+for site in ("GMRT", "vla", "MeerKAT", "ASKAP"):
+    EarthLocation.of_site(site)
+print("Offline Astropy observatory registry OK")
+'
+
+    echo "=== [D] Install frozen CASA runtime data and disable all auto-updates ==="
+    mkdir -p /opt/casa/data
+    tar -xf /opt/offline/casa-data.tar -C /opt/casa/data
+    test -s /opt/casa/data/readme.txt
+    test -d /opt/casa/data/ephemerides
+    test -d /opt/casa/data/geodetic
+    mkdir -p /opt/casa
+    printf '%s\n' \
+        'import os' \
+        'measurespath = "/opt/casa/data"' \
+        'datapath = [measurespath]' \
+        'cachedir = os.environ.get("SLURM_TMPDIR", os.environ.get("TMPDIR", "/tmp"))' \
+        'measures_auto_update = False' \
+        'data_auto_update = False' \
+        'user_site = False' \
+        'nologger = True' \
+        'nologfile = True' \
+        'nogui = True' \
+        'agg = True' \
+        > /opt/casa/casasiteconfig.py
+    # CASA reads its frozen measures and site configuration as the caller,
+    # not as the fakeroot user that populated these directories.
+    chmod -R a+rX /opt/casa
+    export CASASITECONFIG=/opt/casa/casasiteconfig.py
+
+    echo "=== [E] Build C++ casacore ${CASACORE_TAG} ==="
+    mkdir -p /opt/casacore-data/data
+    tar -xzf /opt/offline/casacore-measures.ztar -C /opt/casacore-data/data
+    test -d /opt/casacore-data/data/ephemerides
+    test -d /opt/casacore-data/data/geodetic
+    chmod -R a+rX /opt/casacore-data
+
+    cmake -S /opt/src/casacore -B /opt/src/casacore/build \
+        -DCMAKE_INSTALL_PREFIX=/opt/casacore \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DCMAKE_BUILD_TYPE=Release \
+        '-DCMAKE_INSTALL_RPATH=/opt/casacore/lib;/opt/askap/lib' \
+        -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
+        -DCMAKE_PREFIX_PATH=/opt/askap \
+        -DBUILD_TESTING=OFF \
+        -DBUILD_PYTHON=OFF \
+        -DBUILD_PYTHON3=ON \
+        -DPython3_ROOT_DIR=/opt/askap \
+        -DPython3_EXECUTABLE=/opt/askap/bin/python \
+        -DPython3_FIND_STRATEGY=LOCATION \
+        -DBoost_ROOT=/opt/askap \
+        -DBoost_NO_SYSTEM_PATHS=ON \
+        -DBoost_NO_BOOST_CMAKE=ON \
+        "-DBOOST_PYTHON3_LIBRARY_NAME=python${BOOST_PYTHON_SUFFIX}" \
+        "-DBoost_PYTHON${BOOST_PYTHON_SUFFIX}_LIBRARY_RELEASE=$BOOST_PYTHON_LIB" \
+        "-DBoost_PYTHON${BOOST_PYTHON_SUFFIX}_LIBRARY_DEBUG=$BOOST_PYTHON_LIB" \
+        -DUSE_HDF5=ON \
+        -DUSE_OPENMP=OFF \
+        -DUSE_THREADS=ON \
+        -DDATA_DIR=/opt/casacore-data/data
+    cmake --build /opt/src/casacore/build --parallel "$(nproc)"
+    cmake --install /opt/src/casacore/build
+    rm -rf /opt/src/casacore/build
+    test -f /opt/casacore/lib/libcasa_python3.so
+    check_casacore_linkage /opt/casacore/lib/libcasa_python3.so casacore-python3
+    if ! grep -Eq 'libboost_python.*=> /opt/askap/lib/' \
+        /opt/askap-build-info/casacore-python3-ldd.txt; then
+        echo "ERROR: libcasa_python3 did not link to the Python 3.12 Boost.Python in /opt/askap." >&2
+        exit 1
+    fi
+
+    echo "=== [F] Build portable WSClean ${WSCLEAN_TAG} against /opt/casacore ==="
+    # The archived WSClean checkout is owned by the build user while %post
+    # runs under fakeroot.  Trust only this checkout for git version queries;
+    # do not write a global Git config in the user's small home directory.
+    export GIT_CONFIG_COUNT=1
+    export GIT_CONFIG_KEY_0=safe.directory
+    export GIT_CONFIG_VALUE_0=/opt/src/wsclean
+    # Boost.System 1.92 is header-only.  WSClean 3.5's legacy FindBoost call
+    # still requires a separate system binary; remove only that component.
+    patch --batch --forward -p1 -d /opt/src/wsclean \
+        < /opt/build-recipe/0003-wsclean-header-only-boost-system.patch
+    # Radler is configured by a separate ExternalProject invocation.  Pass
+    # the frozen FetchContent source paths to that configure explicitly.
+    patch --batch --forward -p1 -d /opt/src/wsclean \
+        < /opt/build-recipe/0004-wsclean-radler-offline-fetchcontent.patch
+    # Keep the OpenSSL pair and the C++ runtime from the same frozen Python /
+    # Boost environment; the bootstrap OS libraries have older ABI symbols.
+    patch --batch --forward -p1 -d /opt/src/wsclean \
+        < /opt/build-recipe/0005-wsclean-consistent-abi-libraries.patch
+    test -f /opt/askap/lib/libpython3.12.so
+    test -d /opt/askap/include/python3.12
+    test -f /opt/askap/lib/libstdc++.so.6
+    test -e /opt/askap/lib/libstdc++.so
+    test -f /opt/askap/lib/libssl.so.3
+    test -f /opt/askap/lib/libcrypto.so.3
+    strings /opt/askap/lib/libstdc++.so.6 | grep -Fx 'GLIBCXX_3.4.31' >/dev/null
+    strings /opt/askap/lib/libcrypto.so.3 | grep -Fx 'OPENSSL_3.6.0' >/dev/null
+    cmake -S /opt/src/wsclean -B /opt/src/wsclean/build \
+        -DCMAKE_INSTALL_PREFIX=/opt/wsclean \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DPORTABLE="$WSCLEAN_PORTABLE" \
+        -DGIT_SUBMODULE=OFF \
+        -DBUILD_PACKAGES=OFF \
+        -DBUILD_TESTING=OFF \
+        -DFETCHCONTENT_FULLY_DISCONNECTED=ON \
+        -DFETCHCONTENT_SOURCE_DIR_XTL:PATH=/opt/src/fetchcontent/xtl \
+        -DFETCHCONTENT_SOURCE_DIR_XSIMD:PATH=/opt/src/fetchcontent/xsimd \
+        -DFETCHCONTENT_SOURCE_DIR_XTENSOR:PATH=/opt/src/fetchcontent/xtensor \
+        -DFETCHCONTENT_SOURCE_DIR_XTENSOR-BLAS:PATH=/opt/src/fetchcontent/xtensor-blas \
+        -DFETCHCONTENT_SOURCE_DIR_XTENSOR-FFTW:PATH=/opt/src/fetchcontent/xtensor-fftw \
+        -DPYTHON_EXECUTABLE:FILEPATH=/opt/askap/bin/python \
+        -DPYTHON_LIBRARY:FILEPATH=/opt/askap/lib/libpython3.12.so \
+        -DPYTHON_INCLUDE_DIR:PATH=/opt/askap/include/python3.12 \
+        -DCASACORE_ROOT_DIR=/opt/casacore \
+        -DCMAKE_PREFIX_PATH=/opt/casacore \
+        -DASKAP_ABI_LIB_DIR:PATH=/opt/askap/lib \
+        '-DCMAKE_EXE_LINKER_FLAGS:STRING=-L/opt/askap/lib -Wl,-rpath-link,/opt/askap/lib -Wl,-rpath,/opt/askap/lib -Wl,--push-state,--no-as-needed /opt/askap/lib/libssl.so.3 /opt/askap/lib/libcrypto.so.3 -Wl,--pop-state' \
+        '-DCMAKE_SHARED_LINKER_FLAGS:STRING=-L/opt/askap/lib -Wl,-rpath-link,/opt/askap/lib -Wl,-rpath,/opt/askap/lib -Wl,--push-state,--no-as-needed /opt/askap/lib/libssl.so.3 /opt/askap/lib/libcrypto.so.3 -Wl,--pop-state' \
+        '-DCMAKE_INSTALL_RPATH=/opt/casacore/lib;/opt/askap/lib' \
+        -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
+    echo '=== WSClean executable link command ==='
+    sed -n '1p' /opt/src/wsclean/build/CMakeFiles/wsclean.dir/link.txt
+    echo '=== chgcentre executable link command ==='
+    sed -n '1p' /opt/src/wsclean/build/CMakeFiles/chgcentre.dir/link.txt
+    cmake --build /opt/src/wsclean/build --parallel "$(nproc)"
+    cmake --install /opt/src/wsclean/build
+    rm -rf /opt/src/wsclean/build
+    check_casacore_linkage /opt/wsclean/bin/wsclean wsclean
+    if ! grep -Eq 'libstdc\+\+\.so\.6 => /opt/askap/lib/' \
+        /opt/askap-build-info/wsclean-ldd.txt; then
+        echo 'ERROR: WSClean is not using the frozen /opt/askap C++ runtime.' >&2
+        exit 1
+    fi
+    for openssl_lib in libssl.so.3 libcrypto.so.3; do
+        if ! grep -F "$openssl_lib => /opt/askap/lib/" \
+            /opt/askap-build-info/wsclean-ldd.txt >/dev/null; then
+            echo "ERROR: WSClean is not using frozen $openssl_lib." >&2
+            exit 1
+        fi
+    done
+    if grep -E 'lib(ssl|crypto)\.so\.3 =>' /opt/askap-build-info/wsclean-ldd.txt \
+        | grep -v '/opt/askap/lib/' >/dev/null; then
+        echo 'ERROR: WSClean mixes OpenSSL libraries outside /opt/askap.' >&2
+        exit 1
+    fi
+    echo '=== [F.1] Run WSClean version smoke test ==='
+    if /opt/wsclean/bin/wsclean --version \
+        > /opt/askap-build-info/wsclean-version.txt 2>&1; then
+        cat /opt/askap-build-info/wsclean-version.txt
+    else
+        rc=$?
+        cat /opt/askap-build-info/wsclean-version.txt >&2
+        echo "ERROR: WSClean --version failed (exit=${rc})." >&2
+        exit "$rc"
+    fi
+
+    echo "=== [G] Build python-casacore ${PYTHON_CASACORE_TAG} from source ==="
+    export CMAKE_PREFIX_PATH=/opt/casacore:/opt/askap
+    export PKG_CONFIG_PATH=/opt/casacore/lib/pkgconfig:/opt/askap/lib/pkgconfig
+    export BOOST_ROOT=/opt/askap
+    export BOOST_INCLUDEDIR=/opt/askap/include
+    export BOOST_LIBRARYDIR=/opt/askap/lib
+    export CMAKE_GENERATOR=Ninja
+    export LDFLAGS='-Wl,-rpath,/opt/casacore/lib -Wl,-rpath,/opt/askap/lib'
+    export CMAKE_ARGS="-DCASACORE_ROOT_DIR=/opt/casacore \
+        -DCMAKE_INSTALL_RPATH=/opt/casacore/lib;/opt/askap/lib \
+        -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
+        -DPython_ROOT_DIR=/opt/askap \
+        -DPython_EXECUTABLE=/opt/askap/bin/python \
+        -DPython_FIND_STRATEGY=LOCATION \
+        -DBoost_ROOT=/opt/askap \
+        -DBoost_NO_SYSTEM_PATHS=ON \
+        -DBoost_NO_BOOST_CMAKE=ON \
+        -DBoost_PYTHON3_LIBRARY_RELEASE=$BOOST_PYTHON_LIB \
+        -DBoost_PYTHON3_LIBRARY_DEBUG=$BOOST_PYTHON_LIB \
+        -DBUILD_TESTING=OFF"
+    /opt/askap/bin/python -m pip install \
+        --no-index --no-deps --no-build-isolation /opt/src/python-casacore
+
+    PYCASA_EXT="$(/opt/askap/bin/python -c \
+        'from casacore.tables import _tables; print(_tables.__file__)')"
+    test -f "$PYCASA_EXT"
+    check_casacore_linkage "$PYCASA_EXT" python-casacore
+    if ! grep -Eq 'libboost_python.*=> /opt/askap/lib/' \
+        /opt/askap-build-info/python-casacore-ldd.txt; then
+        echo "ERROR: python-casacore did not link to the Python 3.12 Boost.Python in /opt/askap." >&2
+        ldd "$PYCASA_EXT" >&2
+        exit 1
+    fi
+
+    echo "=== [H] Install the frozen DStools dev tree without dependency resolution ==="
+    /opt/askap/bin/python -m pip install \
+        --no-index --no-deps --no-build-isolation /opt/src/dstools
+    /opt/askap/bin/python -m pip check
+
+    echo "=== [H.1] Verify DStools drains both child pipes and propagates failures ==="
+    /opt/askap/bin/python -c '
+import logging
+import os
+import subprocess
+import sys
+from dstools.logger import parse_stdout_stderr
+
+logger = logging.getLogger("dstools-subprocess-build-test")
+logger.setLevel(logging.DEBUG)
+
+child = subprocess.Popen(
+    [sys.executable, "-c", "import os,time; os.close(2); print(\"first\", flush=True); time.sleep(0.1); print(\"last\", flush=True)"],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+)
+assert parse_stdout_stderr(child, logger) == 0
+
+child = subprocess.Popen(
+    [sys.executable, "-c", "raise SystemExit(7)"],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+)
+try:
+    parse_stdout_stderr(child, logger)
+except subprocess.CalledProcessError as error:
+    assert error.returncode == 7, error.returncode
+else:
+    raise AssertionError("DStools swallowed a non-zero child exit")
+print("DStools subprocess regression test OK")
+'
+
+    FINAL_PYCASA_EXT="$(/opt/askap/bin/python -c \
+        'from casacore.tables import _tables; print(_tables.__file__)')"
+    test -f "$FINAL_PYCASA_EXT"
+    check_casacore_linkage "$FINAL_PYCASA_EXT" python-casacore-final
+    if ! grep -Eq 'libboost_python.*=> /opt/askap/lib/' \
+        /opt/askap-build-info/python-casacore-final-ldd.txt; then
+        echo "ERROR: final python-casacore Boost.Python linkage is incorrect." >&2
+        exit 1
+    fi
+
+    echo "=== [I] Exercise CASA/casacore imports without network or home data ==="
+    # Match DStools' subprocess boundary: both bindings must work, but they
+    # must not load their incompatible casacore symbols in one Python process.
+    /opt/askap/bin/python -c '
+from casaconfig import config
+assert config.measurespath == "/opt/casa/data", config.measurespath
+assert config.measures_auto_update is False
+assert config.data_auto_update is False
+assert config.nologfile is True
+from casatasks import tclean, phaseshift, uvsub, mstransform
+print("CASA task/data smoke test OK")
+'
+    /opt/askap/bin/python -c '
+from casacore.measures import measures
+m = measures()
+m.measure(m.epoch("utc", "today"), "tai")
+print("python-casacore measures smoke test OK")
+'
+
+    echo "=== [J] Save build provenance and require valid RPATH/RUNPATH ==="
+    echo '=== [J.1] Record installed Python packages ==='
+    /opt/askap/bin/python -m pip freeze --all > /opt/askap-build-info/pip-freeze.txt
+    echo '=== [J.2] Record the already frozen CASA data versions ==='
+    cp /opt/build-input-manifests/casa-data-versions.txt \
+        /opt/askap-build-info/casa-current-data.txt
+    test -s /opt/askap-build-info/casa-current-data.txt
+    echo '=== [J.3] Record ELF runtime search paths ==='
+    readelf -d /opt/wsclean/bin/wsclean \
+        | grep -E 'RPATH|RUNPATH' \
+        | tee /opt/askap-build-info/wsclean-rpath.txt
+    readelf -d "$FINAL_PYCASA_EXT" \
+        | grep -E 'RPATH|RUNPATH' \
+        | tee /opt/askap-build-info/python-casacore-rpath.txt
+    grep -q '/opt/casacore/lib' /opt/askap-build-info/wsclean-rpath.txt
+    grep -q '/opt/askap/lib' /opt/askap-build-info/wsclean-rpath.txt
+    grep -q '/opt/casacore/lib' /opt/askap-build-info/python-casacore-rpath.txt
+    grep -q '/opt/askap/lib' /opt/askap-build-info/python-casacore-rpath.txt
+
+    {
+        echo "build_date=$(date -u +%FT%TZ)"
+        echo "build_host=$(hostname)"
+        echo "python_version=$(/opt/askap/bin/python --version 2>&1)"
+        echo "numpy_version=$(/opt/askap/bin/python -c 'import numpy; print(numpy.__version__)')"
+        echo "wsclean_tag=$WSCLEAN_TAG"
+        echo "wsclean_commit=$WSCLEAN_EXPECTED_COMMIT"
+        echo "wsclean_portable=$WSCLEAN_PORTABLE"
+        echo "casacore_tag=$CASACORE_TAG"
+        echo "casacore_commit=$CASACORE_EXPECTED_COMMIT"
+        echo "python_casacore_tag=$PYTHON_CASACORE_TAG"
+        echo "python_casacore_commit=$PYTHON_CASACORE_EXPECTED_COMMIT"
+        echo "python_casacore_extension=$FINAL_PYCASA_EXT"
+        echo "boost_python_library=$BOOST_PYTHON_LIB"
+    } > /opt/askap-build-info/build-summary.txt
+
+    echo "=== [K] Remove build-only material from the candidate image ==="
+    rm -rf \
+        /opt/offline \
+        /opt/src \
+        /opt/build-input-manifests \
+        /opt/askap/pkgs \
+        /root/.cache/pip \
+        /root/.cache/pooch \
+        /var/lib/apt/lists/* \
+        /var/cache/apt/archives/*.deb
+    apt-get clean
+
+%environment
+    export PATH=/opt/wsclean/bin:/opt/askap/bin:$PATH
+    export OPENBLAS_NUM_THREADS=1
+    export PYTHONNOUSERSITE=1
+    export MPLBACKEND=Agg
+    export CASASITECONFIG=/opt/casa/casasiteconfig.py
+    export PIP_NO_INDEX=1
+    export PIP_DISABLE_PIP_VERSION_CHECK=1
+
+%runscript
+    exec "$@"
+
+%test
+    #!/bin/bash
+    set -Eeuo pipefail
+    export OPENBLAS_NUM_THREADS=1
+    source /opt/build-recipe/versions.env
+    export CASASITECONFIG=/opt/casa/casasiteconfig.py
+    /opt/askap/bin/python -c '
+import numpy, pandas, astropy, astroquery, keyring, h5py
+import casacore.tables
+from astropy.coordinates import EarthLocation
+for site in ("GMRT", "vla", "MeerKAT", "ASKAP"):
+    EarthLocation.of_site(site)
+from casaconfig import config
+assert config.measurespath == "/opt/casa/data"
+assert config.measures_auto_update is False
+assert config.data_auto_update is False
+assert config.nologfile is True
+print("Python/python-casacore imports OK")
+'
+    # DStools invokes CASA tasks in a separate Python process to avoid an
+    # ABI clash between casatools and python-casacore. Test the same boundary.
+    /opt/askap/bin/python -c '
+from casatasks import tclean, phaseshift, uvsub, mstransform
+print("CASA task imports OK")
+'
+    /opt/askap/bin/python -m pip check
+    /opt/wsclean/bin/wsclean --version 2>&1 | tee /tmp/wsclean-version.txt
+    grep -q "WSClean version ${WSCLEAN_TAG#v}" /tmp/wsclean-version.txt
+    grep -q 'WGridder is available' /tmp/wsclean-version.txt
+    /opt/askap/bin/dstools-askap-preprocess --help >/dev/null
+    /opt/askap/bin/dstools-create-model --help >/dev/null
+    /opt/askap/bin/dstools-insert-model --help >/dev/null
+    /opt/askap/bin/dstools-subtract-model --help >/dev/null
+    /opt/askap/bin/dstools-extract-ds --help >/dev/null
+    /opt/askap/bin/python -c '
+import logging
+import os
+import subprocess
+import sys
+from dstools.logger import parse_stdout_stderr
+logger = logging.getLogger("dstools-subprocess-runtime-test")
+child = subprocess.Popen(
+    [sys.executable, "-c", "import os,time; os.close(2); print(\"first\", flush=True); time.sleep(0.1); print(\"last\", flush=True)"],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+)
+assert parse_stdout_stderr(child, logger) == 0
+child = subprocess.Popen(
+    [sys.executable, "-c", "raise SystemExit(7)"],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+)
+try:
+    parse_stdout_stderr(child, logger)
+except subprocess.CalledProcessError as error:
+    assert error.returncode == 7
+else:
+    raise AssertionError("DStools swallowed a non-zero child exit")
+'
+    echo "SELF-TEST OK"

@@ -1,0 +1,19 @@
+#!/bin/bash
+# Shared jobs only: DStools insert-model omits WSClean resource options.
+# Preserve supplied options; fill missing -j/-abs-mem from the slot budget.
+set -euo pipefail
+threads_set=false
+memory_set=false
+for argument in "$@"; do
+    case "$argument" in
+        -j) threads_set=true ;;
+        -abs-mem) memory_set=true ;;
+    esac
+done
+if ! "$memory_set"; then
+    set -- -abs-mem "${ASKAP_WSCLEAN_ABS_MEM:?Missing slot memory budget}" "$@"
+fi
+if ! "$threads_set"; then
+    set -- -j "${ASKAP_WSCLEAN_SLOT_THREADS:?Missing slot CPU budget}" "$@"
+fi
+exec /opt/wsclean/bin/wsclean "$@"

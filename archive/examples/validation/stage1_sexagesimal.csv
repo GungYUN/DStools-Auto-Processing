@@ -1,0 +1,5 @@
+Object,RA_HMS,DEC_DMS,Label
+001,12:00:00.000,-28:00:00.00,synthetic
+Source A,12:00:30.000,-28:15:00.00,synthetic
+Target+03,00:00:00.000,-60:00:00.00,synthetic
+Target-04,23:59:59.900,+15:30:00.00,synthetic
